@@ -1,4 +1,4 @@
-# This triggers the workflow on pushes and pull requests to the main branch
+# Este flujo activa el pipeline al hacer push o pull request a la rama main
 on:
   push:
     branches:
@@ -9,13 +9,49 @@ on:
 
 jobs:
   build:
-    name: Build
+    name: Build, Test, Deploy and E2E Testing
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      # 1. Descarga el código del repositorio actual (React JS)
+      - name: Checkout React repo
         uses: actions/checkout@v4
 
+      # 2. Configura el entorno de Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 3. Instala las dependencias de tu proyecto React
+      - name: Install dependencies
+        run: npm install
+
+      # 4. Corre las pruebas unitarias básicas de React
+      - name: Run Tests
+        run: npm test -- --watchAll=false
+
+      # 5. Despliega la aplicación hacia Vercel usando tu secreto VERCEL_TOKEN
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }} # Si tu guía no te pide este ID, puedes omitir esta línea
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }} # Si tu guía no te pide este ID, puedes omitir esta línea
+          vercel-args: '--prod'
+
+      # 6. Descarga de forma segura tu segundo repositorio utilizando el Secreto creado en GitHub
+      - name: Checkout Cypress repo
+        uses: actions/checkout@v4
+        with:
+          repository: '23100548-web/cypresss15'
+          token: ${{ secrets.MI_GITHUB_TOKEN_REPOS }}
+          path: cypress-tests # Descarga las pruebas dentro de esta subcarpeta
+
+      # 7. Ejecuta las pruebas automatizadas de Cypress en el entorno virtual
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
-          working-directory: cypress15c-main/cypress15c-main
+          working-directory: cypress-tests
+          browser: chrome
